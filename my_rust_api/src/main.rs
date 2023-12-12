@@ -2,16 +2,36 @@ use axum::{
     body::Body,
     http::StatusCode,
     response::{IntoResponse, Response},
+    extract::{Path, Query, Json},
     routing::{get, post},
-    Json, Router,
+    Router,
 };
-use serde::Serialize;
+use serde::{
+    Serialize, 
+    Deserialize};
 
 #[derive(Serialize)]
 struct User {
     id: u64,
     name: String,
     email: String
+}
+
+#[derive(Deserialize)]
+struct Item {
+    title: String,
+}
+#[derive(Deserialize)]
+struct Page {
+    number: u32,
+}
+
+async fn show_item(Path(id): Path<u32>, Query(page): Query<Page>) -> String {
+    format!("Item {} on page {}", id, page.number)
+}
+
+async fn add_item(Json(item): Json<Item>) -> String {
+    format!("Added item: {}", item.title)
 }
 
 async fn create_user() -> impl IntoResponse {
@@ -42,7 +62,9 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async {"Hello, Rust!"}))
         .route("/create-user", post(create_user))
-        .route("/users", get(list_users));
+        .route("/users", get(list_users))
+        .route("/item/:id", get(show_item))
+        .route("/add-item", post(add_item));
 
     println!("Running on http://localhost:3000");
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
