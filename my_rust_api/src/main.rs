@@ -2,13 +2,20 @@ use axum::{
     body::Body,
     http::StatusCode,
     response::{IntoResponse, Response},
-    extract::{Path, Query, Json},
+    extract::{Path, Query, Json, Extension},
     routing::{get, post, delete},
     Router,
+    Server,
 };
 use serde::{
     Serialize, 
-    Deserialize};
+    Deserialize
+};
+use serde_json::json;
+use sqlx::{
+    MySqlPool,
+    Row,
+};
 
 #[derive(Serialize)]
 struct User {
@@ -86,6 +93,8 @@ async fn perform_delete_user(user_id: u64) -> Result<(), String> {
 
 #[tokio::main]
 async fn main() {
+    let database_url = "mysql://root:root@localhost:3306/world";
+    let pool = MySqlPool::connect(&database_url);
     let app = Router::new()
         .route("/", get(|| async {"Hello, Rust!"}))
         .route("/create-user", post(create_user))
