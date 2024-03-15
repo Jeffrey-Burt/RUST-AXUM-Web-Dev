@@ -1,6 +1,7 @@
 use axum::{
     body::Body,
-    http::StatusCode,
+    http::{StatusCode, Request},
+    middleware::{self, Next},
     response::{IntoResponse, Response},
     extract::{Path, Query, Json, Extension},
     routing::{get, post, delete},
@@ -16,6 +17,7 @@ use sqlx::{
     MySqlPool,
     Row,
 };
+use chrono::Local;
 
 #[derive(Serialize)]
 struct User {
@@ -37,6 +39,15 @@ struct Item {
 #[derive(Deserialize)]
 struct Page {
     number: u32,
+}
+
+fn get_current_datetime() -> String {
+    return Local::now().format("%m/%d/%Y %H:%M:%S").to_string();
+}
+
+async fn logging_middleware(req: Request<Body>, next: Next<Body>) -> Response {
+    println!("[{}] Received a requst to {}", get_current_datetime(), req.uri());
+    next.run(req).await
 }
 
 async fn show_item(Path(id): Path<u32>, Query(page): Query<Page>) -> String {
@@ -91,17 +102,58 @@ async fn perform_delete_user(user_id: u64) -> Result<(), String> {
     }
 }
 
+
+async fn get_users(Extension(pool): Extension<MySqlPool>) -> impl IntoResponse {
+    let rows = match sqlx::query("SELECT id, name, email FROM users")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
+                .into_response()
+        }
+    };
+
+    let users: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<i32, _>("id").unwrap_or_default(),
+                "name": row.try_get::<String, _>("name").unwrap_or_default(),
+                "email": row.try_get::<String, _>("email").unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    (axum::http::StatusCode::OK, Json(users)).into_response()
+}
+
+
+/**
+async fn MySqlPool::connect(database_url: &str) -> Result<Pool<DB>, Error> {
+    database_url = "mysql://root:root@localhost:3306/world"
+}**/
+
+
 #[tokio::main]
 async fn main() {
-    let database_url = "mysql://root:root@localhost:3306/world";
-    let pool = MySqlPool::connect(&database_url);
+    let database_url = "mysql://root:Mysqlpassword123@localhost:3306/world";
+    let pool = MySqlPool::connect(&database_url).
+        await
+        .expect("Could not connect to the database");
     let app = Router::new()
         .route("/", get(|| async {"Hello, Rust!"}))
         .route("/create-user", post(create_user))
-        .route("/users", get(list_users))
+        .route("/users", get(get_users))
         .route("/item/:id", get(show_item))
         .route("/add-item", post(add_item))
-        .route("/delete-user/:user_id", delete(delete_user));
+        .route("/delete-user/:user_id", delete(delete_user))
+        .layer(Extension(pool))
+        .layer(middleware::from_fn(logging_middleware));
 
     println!("Running on http://localhost:3000");
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
