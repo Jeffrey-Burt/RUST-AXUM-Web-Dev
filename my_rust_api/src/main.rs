@@ -132,6 +132,113 @@ async fn get_users(Extension(pool): Extension<MySqlPool>) -> impl IntoResponse {
     (axum::http::StatusCode::OK, Json(users)).into_response()
 }
 
+// {:?} in formatting to print a vector
+async fn remove_user(Extension(pool): Extension<MySqlPool>, Path(user_id): Path<u64>) -> impl IntoResponse {
+    let user_to_remove = format!("DELETE FROM users WHERE id={}", user_id);
+    let remove_user = match sqlx::query(&user_to_remove)
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(remove_user) => {
+            if remove_user.is_empty() {
+                println!("User successfully removed or user did not exist")
+            }
+            remove_user
+        },
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                println!("Failed to remove user {} from table", user_id),
+            )
+                .into_response()
+        }
+    };
+
+    println!("{:?}", remove_user);
+
+    let rows = match sqlx::query("SELECT id, name, email FROM users")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
+                .into_response()
+        }
+    };
+
+    let users: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<i32, _>("id").unwrap_or_default(),
+                "name": row.try_get::<String, _>("name").unwrap_or_default(),
+                "email": row.try_get::<String, _>("email").unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    println!("Users:\n{:?}", &users);
+
+    (axum::http::StatusCode::OK, Json(users)).into_response()
+}
+
+async fn add_user(Extension(pool): Extension<MySqlPool>, Path(user_id): Path<u64>) -> impl IntoResponse {
+    let user_to_add = format!("INSERT INTO users (id, name, email)
+                                  VALUES ({}, 'Justin Flinch-Fletcher', 'justin.ff@email.com')", user_id);
+    let add_user = match sqlx::query(&user_to_add)
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(add_user) => {
+            if add_user.is_empty() {
+                println!("User successfully removed or user did not exist")
+            }
+            add_user
+        },
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                println!("Failed to remove user {} from table", user_id),
+            )
+                .into_response()
+        }
+    };
+
+    println!("{:?}", add_user);
+
+    let rows = match sqlx::query("SELECT id, name, email FROM users")
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(rows) => rows,
+        Err(_) => {
+            return (
+                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error",
+            )
+                .into_response()
+        }
+    };
+
+    let users: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(|row| {
+            json!({
+                "id": row.try_get::<i32, _>("id").unwrap_or_default(),
+                "name": row.try_get::<String, _>("name").unwrap_or_default(),
+                "email": row.try_get::<String, _>("email").unwrap_or_default(),
+            })
+        })
+        .collect();
+
+    println!("Users:\n{:?}", &users);
+
+    (axum::http::StatusCode::OK, Json(users)).into_response()
+}
 
 /**
 async fn MySqlPool::connect(database_url: &str) -> Result<Pool<DB>, Error> {
@@ -152,6 +259,8 @@ async fn main() {
         .route("/item/:id", get(show_item))
         .route("/add-item", post(add_item))
         .route("/delete-user/:user_id", delete(delete_user))
+        .route("/remove-user/:user_id", post(remove_user))
+        .route("/add-user/:user_id", post(add_user))
         .layer(Extension(pool))
         .layer(middleware::from_fn(logging_middleware));
 
