@@ -19,3 +19,13 @@ To start out:
 Long as everything compiles properly, start the local service with the following:
 
 ```cargo run```
+
+---
+
+If you want continuous modification and execution, you can use cargo-watch
+
+```cargo install cargo-watch```
+
+Once installed, run cargo-watch with the following command:
+
+```cargo-watch -qx run```
