@@ -11,6 +11,6 @@ fn get_current_datetime() -> String {
 }
 
 pub async fn logging_middleware(req: Request<Body>, next: Next<Body>) -> Response {
-    println!("[{}] Received a requst to {}", get_current_datetime(), req.uri());
+    println!("[{}] Received {} to {}", get_current_datetime(), req.method(), req.uri());
     next.run(req).await
 }

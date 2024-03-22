@@ -1,12 +1,8 @@
 use axum::{
     body::Body,
-    middleware::self,
-    http::{StatusCode, Request},
+    http::StatusCode,
     response::{IntoResponse, Response},
     extract::{Path, Query, Json, Extension},
-    routing::{get, post, delete},
-    Router,
-    Server,
 };
 use serde::{
     Serialize, 
