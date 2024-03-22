@@ -6,7 +6,7 @@ use axum::{
     http::Request
 };
 
-pub fn get_current_datetime() -> String {
+fn get_current_datetime() -> String {
     return Local::now().format("%m/%d/%Y %H:%M:%S").to_string();
 }
 

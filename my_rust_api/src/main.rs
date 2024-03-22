@@ -1,5 +1,6 @@
 mod svc_init;
 mod db_init;
+pub mod logging;
 
 #[tokio::main]
 async fn main() {
