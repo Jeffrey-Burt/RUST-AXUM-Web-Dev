@@ -40,11 +40,6 @@ pub struct Page {
     number: u32,
 }
 
-
-pub fn get_database_url() -> &str {
-    return 
-}
-
 pub async fn show_item(Path(id): Path<u32>, Query(page): Query<Page>) -> String {
     format!("Item {} on page {}", id, page.number)
 }
