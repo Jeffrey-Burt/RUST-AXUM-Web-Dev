@@ -15,3 +15,7 @@ To start out:
 ```cd RUST-AXUM-Web-Dev\my_rust_api```
 
 ```cargo build```
+
+Long as everything compiles properly, start the local service with the following:
+
+```cargo run```
